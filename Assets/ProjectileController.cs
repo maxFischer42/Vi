@@ -20,6 +20,8 @@ public class ProjectileController : MonoBehaviour
 
     bool readyToThrow;
 
+    public Queue<Transform> generated_structures = new Queue<Transform>();
+
     private void Start()
     {
         readyToThrow = true;
@@ -39,7 +41,7 @@ public class ProjectileController : MonoBehaviour
 
         // Instantiate object to throw
         GameObject projectile = Instantiate(prefab, attackPoint.position, cam.rotation);
-
+        projectile.GetComponent<KunaiCreateObject>().parentScript = this;
         // Get RigidBody component
         Rigidbody projectileRigidbody = projectile.GetComponent<Rigidbody>();
 

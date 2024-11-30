@@ -1,6 +1,7 @@
 using Cinemachine;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
@@ -49,6 +50,7 @@ public class PlayerMovement : MonoBehaviour
     public float spinCooldown;
     private bool canSpin;
 
+    [Header("Model Handling")]
 
     float horizontalInput;
     float verticalInput;
@@ -65,6 +67,14 @@ public class PlayerMovement : MonoBehaviour
 
     public MovementState state;
     private CapsuleCollider mainCollider;
+
+    public Animator _anim;
+    public Animator _shadowAnim;
+    public Transform modelParent;
+    public float verticalCrouchOffset = 1f;
+
+    private float animator_velocity;
+    private bool animator_isMoving;
 
     public enum MovementState
     {
@@ -95,6 +105,12 @@ public class PlayerMovement : MonoBehaviour
         SpeedControl();
         MovementStateHandler();
         HandleGroundDrag();
+
+        _anim.SetFloat("velocity", animator_velocity);
+        _anim.SetBool("movingAxis", (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0));
+
+        _shadowAnim.SetFloat("velocity", animator_velocity);
+        _shadowAnim.SetBool("movingAxis", (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0));
     }
 
     private void FixedUpdate()
@@ -134,7 +150,9 @@ public class PlayerMovement : MonoBehaviour
         {
             mainCollider.height = crouchYScale;
             mainCollider.center = new Vector3(0, crouchYScale / 2f, 0);
-            rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);            
+            rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+            //modelParent.transform.localPosition = Vector3.Lerp(modelParent.transform.position, Vector3.up * verticalCrouchOffset, Time.timeScale);
+            modelParent.transform.localPosition = Vector3.up * verticalCrouchOffset;
         }
 
         // Stop Crouch
@@ -142,10 +160,12 @@ public class PlayerMovement : MonoBehaviour
             mainCollider.height = startYScale;
             mainCollider.center = Vector3.zero;
             rb.AddForce(Vector3.up * 5f, ForceMode.Impulse);
+            //modelParent.transform.localPosition = Vector3.Lerp(Vector3.up * verticalCrouchOffset, modelParent.transform.position, Time.timeScale);
+            modelParent.transform.localPosition = Vector3.down;
         }
 
         // Spin
-        if(Input.GetKeyDown(spinKey) && (state != MovementState.aim && state != MovementState.crouching) && canAirSpin)
+        if(Input.GetKeyDown(spinKey) && (state != MovementState.aim && state != MovementState.crouching) && (grounded == true || canAirSpin))
         {
             DoSpin();
             Invoke(nameof(ResetSpin), spinCooldown);
@@ -184,6 +204,34 @@ public class PlayerMovement : MonoBehaviour
             rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
         }
 
+        animator_isMoving = false;
+        float velocity = Mathf.Max(Mathf.Abs(rb.velocity.x), Mathf.Abs(rb.velocity.z));
+        //switch(state)
+        //{
+        //    case MovementState.walking:
+        //        animator_velocity = 1f;
+        //        animator_isMoving = true;
+        //        break;
+        //    case MovementState.sprinting:
+        //        animator_velocity = 2f;
+        //        animator_isMoving = true;
+        //        break;
+        //    case MovementState.sneaking:
+        //        animator_velocity = 0.15f;
+        //        animator_isMoving = true;
+        //        break;
+        //    default:
+        //        animator_velocity = 0f;
+        //        if(grounded)
+        //        {
+
+        //        } else
+        //        {
+
+        //        }
+        //        break;
+        //}
+        animator_velocity = velocity;
         // Turn gravity off when on slope
         rb.useGravity = !isOnSlope;
 
@@ -193,6 +241,8 @@ public class PlayerMovement : MonoBehaviour
     {
         // Ground Check
         grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, groundLayers);
+        _anim.SetBool("grounded", grounded);
+        _shadowAnim.SetBool("grounded", grounded);
     }
 
     private void HandleGroundDrag()
@@ -236,6 +286,11 @@ public class PlayerMovement : MonoBehaviour
         // reset y velocity
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.y);
         rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
+        if (grounded)
+        {
+            _anim.SetTrigger("Jump");
+            _shadowAnim.SetTrigger("Jump");
+        }
     }
 
     private void SpinJump()
@@ -255,10 +310,14 @@ public class PlayerMovement : MonoBehaviour
 
     private void MovementStateHandler()
     {
+        _anim.SetBool("isCrouch", false);
+        _shadowAnim.SetBool("isCrouch", false);
         // Mode - Crouching
-        if(grounded && Input.GetKey(crouchKey)) {
+        if (grounded && Input.GetKey(crouchKey)) {
             state = MovementState.crouching;
             moveSpeed = crouchSpeed;
+            _anim.SetBool("isCrouch", true);
+            _shadowAnim.SetBool("isCrouch", true);
         }
         // Mode - Sprinting
         else if(grounded && Input.GetKey(sprintKey))
@@ -309,8 +368,9 @@ public class PlayerMovement : MonoBehaviour
     {
         canSpin = false;
         Debug.Log("Spin!");
-
-        if(!grounded)
+        _anim.SetTrigger("Spin");
+        _shadowAnim.SetTrigger("Spin");
+        if (!grounded)
         {
             SpinJump();
             canAirSpin = false;
@@ -321,4 +381,5 @@ public class PlayerMovement : MonoBehaviour
     {
         canSpin = true;
     }
+
 }
