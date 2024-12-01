@@ -10,7 +10,9 @@ public class PlayerMovement : MonoBehaviour
     [Header("Reference")]
     public ThirdPersonCamera cameraController;
     public ProjectileController projectileController;
-    
+    public ParticleSystem tailSwingParticles;
+    public ParticleSystem dustParticles;
+
     [Header("Movement")]
     private float moveSpeed;
     public float groundDrag;
@@ -41,6 +43,8 @@ public class PlayerMovement : MonoBehaviour
     public LayerMask groundLayers;
     bool grounded;
 
+    public float coyoteTimeLength = 0.2f;
+
     [Header("Slope Handling")]
     public float maxSlopeAngle;
     private RaycastHit slopeHit;
@@ -57,6 +61,8 @@ public class PlayerMovement : MonoBehaviour
 
     bool isAiming = false;
     bool canAirSpin = false;
+
+    bool coyoteTime = false;
 
 
     public Transform orientation;
@@ -138,7 +144,7 @@ public class PlayerMovement : MonoBehaviour
 
 
         // When to jump
-        if (Input.GetKey(jumpKey) && readyToJump && grounded)
+        if (Input.GetKey(jumpKey) && readyToJump && (grounded || coyoteTime))
         {
             readyToJump = false;
             Jump();
@@ -239,10 +245,20 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleGroundCheck()
     {
+        bool previousGroundState = grounded;
         // Ground Check
         grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, groundLayers);
         _anim.SetBool("grounded", grounded);
         _shadowAnim.SetBool("grounded", grounded);
+        if(previousGroundState && !grounded) {
+            coyoteTime = true;
+            Invoke(nameof(HandleCoyoteTime), coyoteTimeLength);
+        }
+    }
+
+    private void HandleCoyoteTime()
+    {
+        coyoteTime = false;
     }
 
     private void HandleGroundDrag()
@@ -370,6 +386,8 @@ public class PlayerMovement : MonoBehaviour
         Debug.Log("Spin!");
         _anim.SetTrigger("Spin");
         _shadowAnim.SetTrigger("Spin");
+        tailSwingParticles.Play();
+        tailSwingParticles.GetComponentInChildren<ParticleSystem>().Play();
         if (!grounded)
         {
             SpinJump();
@@ -380,6 +398,16 @@ public class PlayerMovement : MonoBehaviour
     private void ResetSpin()
     {
         canSpin = true;
+    }
+
+    public void AnimAction_PlayDust()
+    {
+        dustParticles.Play();
+    }
+
+    public bool isGrounded()
+    {
+        return grounded;
     }
 
 }

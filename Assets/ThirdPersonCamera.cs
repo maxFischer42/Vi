@@ -16,6 +16,7 @@ public class ThirdPersonCamera : MonoBehaviour
 
     [Header("Camera")]
     public ProjectileController projectileController;
+    public PlayerMovement playerMovement;
     public GameObject primaryCamera;
     public GameObject combatCamera;
     public GameObject topDownCamera;
@@ -44,13 +45,16 @@ public class ThirdPersonCamera : MonoBehaviour
         // rotate player object
         if (cameraStyle == CameraStyle.Basic)
         {
-            float horizontalInput = Input.GetAxis("Horizontal");
-            float verticalInput = Input.GetAxis("Vertical");
-            Vector3 inputDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
-
-            if (inputDirection != Vector3.zero)
+            if (playerMovement.isGrounded())
             {
-                playerObj.forward = Vector3.Slerp(playerObj.forward, inputDirection.normalized, Time.deltaTime * rotationSpeed);
+                float horizontalInput = Input.GetAxis("Horizontal");
+                float verticalInput = Input.GetAxis("Vertical");
+                Vector3 inputDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
+
+                if (inputDirection != Vector3.zero)
+                {
+                    playerObj.forward = Vector3.Slerp(playerObj.forward, inputDirection.normalized, Time.deltaTime * rotationSpeed);
+                }
             }
         }
         else if (cameraStyle == CameraStyle.Combat)
